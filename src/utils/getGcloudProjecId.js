@@ -15,23 +15,23 @@
 
 'use strict';
 
-const getGcloudProjectId = require('./getGcloudProjecId');
+const execSync = require('child_process').execSync;
 
-module.exports = (projectId) => {
-  if (projectId) {
-    return projectId;
+function trim (str) {
+  if (str && typeof str.toString === 'function') {
+    return str.toString().trim();
   }
-  if (process.env.GCLOUD_PROJECT) {
-    return process.env.GCLOUD_PROJECT;
-  }
-  if (process.env.GOOGLE_CLOUD_PROJECT) {
-    return process.env.GOOGLE_CLOUD_PROJECT;
-  }
+  return str;
+}
+
+function getGcloudProjectId () {
+  return trim(execSync(`gcloud info --format='value(config.project)'`));
+}
+
+module.exports = () => {
   try {
-    projectId = getGcloudProjectId();
+    return getGcloudProjectId();
   } catch (err) {
-    // Print some error message?
+    console.error(err);
   }
-
-  return projectId;
 };

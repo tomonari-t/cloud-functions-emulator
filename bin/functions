@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-require('colors');
+const colors = require('colors');
 
 /**
  * 1. Verify the version of Node.js being used.
@@ -62,19 +62,49 @@ if (server.get('started')) {
 /**
  * 3. Ensure a project ID is configured.
  */
+const prompt = require('prompt');
 const config = require('../src/config');
+const gcloudProjecId = require('../src/utils/getGcloudProjecId')();
 let projectId = require('../src/utils/detectProjectId')(config.get('projectId'));
 
-const getProjectId = () => {
+const askChangeProjectId = () => {
   return new Promise((resolve, reject) => {
-    if (projectId) {
-      resolve(projectId);
-      return;
-    }
+    const message =  `
+${'Emulator\'s project id is not same to gcloud\'s project id. Do you want to change project id to '.bold + gcloudProjecId.green + ' ?'.bold} 
+------------------------------------
+current project id:
+  emulator:  ${projectId.green}
+  gcloud:    ${gcloudProjecId.green}
+------------------------------------
+`.bold;
 
-    const prompt = require('prompt');
-    prompt.message = 'Enter a projectId to get started'.bold;
+    prompt.message = message;
     prompt.start();
+    const schema = {
+      name: 'doChange',
+      validator: /y[es]*|n[o]?/,
+      warning: 'Must respond yes(y) or no(n)',
+      default: 'no'
+    };
+    prompt.get([schema], (err, result) => {
+      if (err) {
+        reject(err);
+      } else {
+        const doChange = /y[es]*/.test(result.doChange);
+        if (doChange) {
+          resolve(gcloudProjecId);
+        } else {
+          resolve(projectId);
+        }
+      }
+    });
+  });
+};
+
+const askInputProjectId = () => {
+  return new Promise((resolve, reject) => {
+    prompt.start();
+    prompt.message = 'Enter a projectId to get started'.bold;
     prompt.get([
       {
         name: 'projectId',
@@ -89,6 +119,28 @@ const getProjectId = () => {
         getProjectId().then(resolve, reject);
       }
     });
+  });
+};
+
+const getProjectId = () => {
+  return new Promise((resolve, reject) => {
+    if (projectId) {
+      if (projectId !== gcloudProjecId) {
+        askChangeProjectId()
+          .then((gcloudProjecId) => {
+              resolve(gcloudProjecId);
+          })
+          .catch(console.error);
+      } else {
+        resolve(projectId);
+      }
+    } else {
+      askInputProjectId()
+        .then((projectId) => {
+          resolve(projectId);
+        })
+        .catch(console.error);
+    }
   });
 }
 
