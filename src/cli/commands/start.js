@@ -77,6 +77,11 @@ exports.handler = (opts) => {
   return controller.status()
     .then((status) => {
       if (status.state === controller.STATE.RUNNING) {
+        controller.log(`
+-----------------------------------------------
+project id: ${controller.config.projectId.bold}
+-----------------------------------------------
+`);
         controller.log(`${controller.name} ${'RUNNING'.green}`);
         return;
       }
